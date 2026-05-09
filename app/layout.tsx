@@ -3,7 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "MSME Copilot — AI Compliance Assistant",
+  title: "CompliEase — AI Compliance Platform for Indian MSMEs",
   description: "AI-powered compliance management for Indian small businesses. GST, licenses, government schemes.",
 };
 

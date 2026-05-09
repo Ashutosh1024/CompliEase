@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CompliEase Portal Bridge</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    width: 360px; min-height: 460px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0b0f1e; color: #e8ecf8;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #5b5ef4, #7c3aed);
+    padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { display: flex; align-items: center; gap: 9px; }
+  .logo-icon { width: 32px; height: 32px; background: rgba(255,255,255,0.15); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .logo-text { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
+  .logo-sub  { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 0.04em; }
+  .header-btns { display: flex; gap: 6px; }
+  .header-btn { padding: 5px 10px; border-radius: 7px; background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 11px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+  .header-btn:hover { background: rgba(255,255,255,0.25); }
+
+  /* ── Portal Status ── */
+  .portal-status {
+    margin: 14px 14px 0;
+    padding: 12px 14px; border-radius: 10px;
+    display: flex; align-items: center; gap: 10;
+    border: 1px solid #1e2640;
+  }
+  .portal-status.supported   { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.25); }
+  .portal-status.unsupported { background: rgba(255,255,255,0.03); border-color: #1e2640; }
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green { background: #10b981; box-shadow: 0 0 6px #10b981; }
+  .dot-gray  { background: #3e4f72; }
+  .status-title { font-size: 13px; font-weight: 600; color: #e8ecf8; }
+  .status-sub   { font-size: 11px; color: #8494bc; margin-top: 2px; }
+
+  /* ── Auth section ── */
+  .auth-section {
+    margin: 14px; padding: 14px;
+    background: rgba(255,255,255,0.03); border: 1px solid #1e2640; border-radius: 10px;
+    text-align: center;
+  }
+  .auth-section p { font-size: 12px; color: #8494bc; margin-bottom: 10px; }
+  .input-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .ext-input {
+    flex: 1; padding: 8px 10px; background: #0f1523; border: 1px solid #1e2640;
+    border-radius: 7px; color: #e8ecf8; font-size: 12px; outline: none;
+  }
+  .ext-input:focus { border-color: #5b5ef4; }
+
+  /* ── Action Buttons ── */
+  .actions { padding: 0 14px; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .btn-scan {
+    width: 100%; padding: 11px; border-radius: 10px; border: 1px solid rgba(6,182,212,0.4);
+    background: rgba(6,182,212,0.1); color: #06b6d4; font-weight: 700; font-size: 13px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px;
+    transition: all 0.18s;
+  }
+  .btn-scan:hover { background: rgba(6,182,212,0.2); }
+  .btn-autofill {
+    width: 100%; padding: 11px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #5b5ef4, #7c3aed); color: #fff;
+    font-weight: 700; font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    transition: all 0.18s;
+  }
+  .btn-autofill:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(91,94,244,0.4); }
+  .btn-autofill:disabled, .btn-scan:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+  /* ── Scan Results ── */
+  .scan-results { margin: 12px 14px 0; }
+  .results-title { font-size: 12px; font-weight: 700; color: #8494bc; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .field-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-radius: 8px; margin-bottom: 5px; font-size: 12px;
+  }
+  .field-row.have { background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.2); }
+  .field-row.missing { background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.2); }
+  .field-name { font-weight: 500; color: #e8ecf8; }
+  .field-val  { font-size: 11px; color: #8494bc; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge-have    { padding: 2px 7px; border-radius: 99px; background: rgba(16,185,129,0.15); color: #10b981; font-size: 10px; font-weight: 700; }
+  .badge-missing { padding: 2px 7px; border-radius: 99px; background: rgba(239,68,68,0.15); color: #f87171; font-size: 10px; font-weight: 700; }
+
+  /* ── Supported portals list ── */
+  .portals-section { margin: 12px 14px; }
+  .portals-title { font-size: 10px; font-weight: 700; color: #3e4f72; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .portal-item {
+    display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+    border-radius: 7px; font-size: 12px; color: #8494bc; margin-bottom: 4px;
+    background: rgba(255,255,255,0.02); border: 1px solid #1e2640;
+  }
+  .portal-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Footer ── */
+  .footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; margin-top: 8px;
+    border-top: 1px solid #1e2640;
+    font-size: 10px; color: #3e4f72;
+  }
+  .tee-badge { padding: 2px 8px; border-radius: 99px; background: rgba(16,185,129,0.1); color: #10b981; font-size: 10px; font-weight: 700; border: 1px solid rgba(16,185,129,0.2); }
+
+  .spinner { display: inline-block; width:14px; height:14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: currentColor; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .msg { margin: 10px 14px; padding: 9px 12px; border-radius: 8px; font-size: 12px; }
+  .msg.success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); color: #10b981; }
+  .msg.error   { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.25);  color: #f87171; }
+  .msg.info    { background: rgba(91,94,244,0.08); border: 1px solid rgba(91,94,244,0.2);   color: #818cf8; }
+
+  #not-logged, #logged { /* toggled by JS */ }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    <div>
+      <div class="logo-text">CompliEase</div>
+      <div class="logo-sub">PORTAL BRIDGE v1.0</div>
+    </div>
+  </div>
+  <div class="header-btns">
+    <button class="header-btn" id="btn-dashboard" title="Open CompliEase">🏠 Dashboard</button>
+    <button class="header-btn" id="btn-settings" title="Settings">⚙️</button>
+  </div>
+</div>
+
+<!-- Not logged in -->
+<div id="not-logged" style="display:none;">
+  <div class="auth-section">
+    <p>Sign in with your CompliEase account to enable auto-fill</p>
+    <div class="input-row">
+      <input class="ext-input" id="ext-email" type="email" placeholder="Email" />
+    </div>
+    <div class="input-row">
+      <input class="ext-input" id="ext-password" type="password" placeholder="Password" />
+    </div>
+    <button class="btn-autofill" id="btn-login" style="margin-top:4px;">
+      Sign In to CompliEase
+    </button>
+  </div>
+</div>
+
+<!-- Logged in -->
+<div id="logged" style="display:none;">
+
+  <!-- Portal status -->
+  <div class="portal-status" id="portal-status-box">
+    <div class="status-dot" id="portal-dot"></div>
+    <div>
+      <div class="status-title" id="portal-title">Detecting portal…</div>
+      <div class="status-sub"   id="portal-sub"></div>
+    </div>
+  </div>
+
+  <!-- Message area -->
+  <div id="msg-area"></div>
+
+  <!-- Action buttons -->
+  <div class="actions" id="action-area">
+    <button class="btn-scan" id="btn-scan" disabled>
+      🔍 Scan Form — Check My Data
+    </button>
+    <button class="btn-autofill" id="btn-autofill" disabled>
+      ⚡ Auto-Fill All Fields
+    </button>
+  </div>
+
+  <!-- Scan results -->
+  <div class="scan-results" id="scan-results" style="display:none;">
+    <div class="results-title">SCAN RESULTS</div>
+    <div id="results-list"></div>
+    <div style="margin-top:8px; font-size:11px; color:#3e4f72;">
+      Missing details? <a href="#" id="link-to-dashboard" style="color:#818cf8;font-weight:600;">Add them on CompliEase →</a>
+    </div>
+  </div>
+
+  <!-- Supported portals -->
+  <div class="portals-section" id="portals-section">
+    <div class="portals-title">SUPPORTED PORTALS</div>
+    <div class="portal-item"><div class="portal-dot" style="background:#5b5ef4;"></div>Udyam Registration</div>
+    <div class="portal-item"><div class="portal-dot" style="background:#10b981;"></div>Startup India</div>
+    <div class="portal-item"><div class="portal-dot" style="background:#f59e0b;"></div>GST Portal</div>
+    <div class="portal-item"><div class="portal-dot" style="background:#06b6d4;"></div>FSSAI / FoSCoS</div>
+    <div class="portal-item"><div class="portal-dot" style="background:#ec4899;"></div>Income Tax Portal</div>
+    <div class="portal-item"><div class="portal-dot" style="background:#a78bfa;"></div>GeM, EPFO, ESIC, MUDRA</div>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <span>CompliEase Portal Bridge v1.0</span>
+  <span class="tee-badge">🔐 TEE Protected</span>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

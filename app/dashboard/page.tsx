@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getProfile, getAuth } from '@/lib/store';
-import { analyzeCompliance, generateAlerts, calculateComplianceScore, GOVERNMENT_SCHEMES } from '@/lib/compliance-data';
-import { BusinessProfile, ComplianceItem, SmartAlert, GovernmentScheme } from '@/lib/types';
+import { apiGetProfile } from '@/lib/apiClient';
+import { analyzeCompliance, generateAlerts, calculateComplianceScore } from '@/lib/compliance-data';
+import { BusinessProfile, ComplianceItem, SmartAlert } from '@/lib/types';
 import Link from 'next/link';
 import {
   AlertTriangle, CheckCircle2, Info, Bell, Bot, Upload, Calendar,
@@ -47,28 +47,27 @@ function ComplianceRing({ score }: { score: number }) {
 
 export default function DashboardPage() {
   const [profile,     setProfile]     = useState<BusinessProfile | null>(null);
-  const [auth,        setAuth]        = useState<{ name: string; email: string } | null>(null);
   const [compliances, setCompliances] = useState<ComplianceItem[]>([]);
   const [alerts,      setAlerts]      = useState<SmartAlert[]>([]);
   const [score,       setScore]       = useState(0);
-  const [schemes,     setSchemes]     = useState<GovernmentScheme[]>([]);
 
   useEffect(() => {
-    const a = getAuth(); const p = getProfile();
-    setAuth(a); setProfile(p);
-    if (p) {
-      const c = analyzeCompliance(p);
-      setCompliances(c);
-      setAlerts(generateAlerts(p, c));
-      setScore(calculateComplianceScore(c));
-      setSchemes(GOVERNMENT_SCHEMES.slice(0, 3));
-    }
+    apiGetProfile().then(p => {
+      if (p) {
+        setProfile(p as BusinessProfile);
+        const c = analyzeCompliance(p as BusinessProfile);
+        setCompliances(c);
+        setAlerts(generateAlerts(p as BusinessProfile, c));
+        setScore(calculateComplianceScore(c));
+      }
+    }).catch(() => {});
   }, []);
 
   const completed = compliances.filter(c => c.status === 'completed').length;
   const missing   = compliances.filter(c => c.status === 'missing').length;
   const pending   = compliances.filter(c => c.status === 'pending').length;
-  const firstName = auth?.name?.split(' ')[0] || 'there';
+  const storedUser = typeof window !== 'undefined' ? (() => { try { return JSON.parse(localStorage.getItem('msme_user') || 'null'); } catch { return null; } })() : null;
+  const firstName = profile?.fullName?.split(' ')[0] || storedUser?.name?.split(' ')[0] || 'there';
   const hour      = new Date().getHours();
   const greeting  = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -290,7 +289,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Schemes */}
+      {/* Schemes CTA */}
       <section style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text1)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -298,28 +297,16 @@ export default function DashboardPage() {
           </p>
           <Link href="/dashboard/government-schemes" style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>See all →</Link>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }} className="schemes-grid">
-          {schemes.map(s => (
-            <div key={s.id} className="scheme-card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span className={`badge ${s.category === 'Loan' ? 'badge-indigo' : s.category === 'Subsidy' ? 'badge-green' : 'badge-amber'}`}>{s.category}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)' }}>{s.eligibilityScore}%</span>
-              </div>
-              <div>
-                <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text1)', marginBottom: 4 }}>{s.name}</h3>
-                <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }} className="truncate-2">{s.description}</p>
-              </div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${s.eligibilityScore}%`, background: 'linear-gradient(90deg,var(--green),var(--cyan))' }} />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <p style={{ fontSize: 11, color: 'var(--text3)' }}>{s.ministry}</p>
-                <a href={s.applyLink} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: 11, gap: 4 }}>
-                  Apply <ExternalLink size={10} />
-                </a>
-              </div>
-            </div>
-          ))}
+        <div style={{ padding: '24px 28px', borderRadius: 16, background: 'linear-gradient(135deg,rgba(16,185,129,0.08),rgba(6,182,212,0.06))', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+          <div>
+            <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text1)', marginBottom: 6 }}>🏛️ 12 Government Schemes Available</p>
+            <p style={{ fontSize: 13, color: 'var(--text2)', maxWidth: 460, lineHeight: 1.6 }}>
+              PMEGP, MUDRA, CGTMSE, GeM, Startup India and more — personalized eligibility scores based on your business profile.
+            </p>
+          </div>
+          <Link href="/dashboard/government-schemes" className="btn btn-primary" style={{ padding: '11px 22px', fontSize: 13, flexShrink: 0, textDecoration: 'none' }}>
+            <Landmark size={15} /> View My Schemes
+          </Link>
         </div>
       </section>
 

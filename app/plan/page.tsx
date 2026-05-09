@@ -20,111 +20,145 @@ const PREMIUM_FEATURES = [
   'Priority deadline notifications',
   'Document vault (unlimited)',
   'State-wise personalized rules',
-  'CA collaboration tools (coming soon)',
-  'WhatsApp reminders (coming soon)',
 ];
 
 export default function PlanPage() {
   const router = useRouter();
-  const [selected, setSelected] = useState<'free' | 'premium'>('free');
-  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<'free'|'premium'>('free');
+  const [loading,  setLoading]  = useState(false);
 
   const handleContinue = async () => {
     setLoading(true);
     const auth = getAuth();
     if (auth) saveAuth({ ...auth });
-    // Store plan selection in localStorage
     localStorage.setItem('msme_plan', selected);
     await new Promise(r => setTimeout(r, 600));
     router.push('/onboarding');
   };
 
+  const isFreeSel     = selected === 'free';
+  const isPremiumSel  = selected === 'premium';
+
   return (
-    <div className="mesh-bg grid-pattern min-h-screen flex flex-col items-center justify-center px-6 py-12">
+    <div style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', padding: '48px 20px',
+      background: 'radial-gradient(ellipse 60% 40% at 20% 20%, rgba(91,94,244,0.1) 0%, transparent 55%), radial-gradient(ellipse 50% 40% at 80% 80%, rgba(124,58,237,0.07) 0%, transparent 55%), var(--bg)',
+    }}>
+
       {/* Header */}
-      <div className="text-center mb-10 animate-fade-up">
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-            <Building2 size={20} className="text-white" />
+      <div style={{ textAlign: 'center', marginBottom: 40 }} className="animate-fade-up">
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 24 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg,#5b5ef4,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(91,94,244,0.4)' }}>
+            <Building2 size={18} color="#fff" />
           </div>
-          <span className="text-xl font-bold text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>MSME Copilot</span>
+          <span style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, fontSize: 17, color: 'var(--text1)' }}>CompliEase</span>
         </div>
-        <h1 className="text-3xl lg:text-4xl font-extrabold text-white mb-3" style={{ fontFamily: 'Plus Jakarta Sans' }}>
-          Choose Your <span className="gradient-text">Plan</span>
+
+        <h1 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 36, fontWeight: 800, color: 'var(--text1)', letterSpacing: '-0.03em', marginBottom: 10 }}>
+          Choose Your{' '}
+          <span style={{ background: 'linear-gradient(135deg,#818cf8,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Plan</span>
         </h1>
-        <p className="text-slate-400 max-w-md mx-auto">Start free and upgrade anytime. No credit card required for free plan.</p>
+        <p style={{ fontSize: 15, color: 'var(--text2)', maxWidth: 440 }}>
+          Start free and upgrade anytime. No credit card required.
+        </p>
       </div>
 
-      {/* Plans Grid */}
-      <div className="grid md:grid-cols-2 gap-6 w-full max-w-3xl animate-fade-up delay-100">
+      {/* Plan cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, width: '100%', maxWidth: 780, marginBottom: 24 }} className="plan-grid animate-fade-up delay-100">
+
         {/* Free Plan */}
-        <div
-          onClick={() => setSelected('free')}
-          className={`glass rounded-2xl p-6 cursor-pointer transition-all duration-300 border-2 ${selected === 'free' ? 'border-indigo-500 glow-primary' : 'border-transparent hover:border-indigo-500/30'}`}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                <Zap size={20} className="text-indigo-400" />
+        <div onClick={() => setSelected('free')} style={{
+          borderRadius: 20, padding: '28px 24px', cursor: 'pointer',
+          background: 'var(--card)',
+          border: `2px solid ${isFreeSel ? 'var(--accent)' : 'var(--border)'}`,
+          boxShadow: isFreeSel ? '0 0 0 4px rgba(91,94,244,0.12)' : 'none',
+          transition: 'all 0.2s ease', position: 'relative',
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(91,94,244,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Zap size={19} color="var(--accent)" />
               </div>
               <div>
-                <h2 className="text-white font-bold text-lg" style={{ fontFamily: 'Plus Jakarta Sans' }}>Free Plan</h2>
-                <p className="text-slate-400 text-xs">Perfect to get started</p>
+                <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--text1)', lineHeight: 1.2 }}>Free Plan</h2>
+                <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>Perfect to get started</p>
               </div>
             </div>
-            {selected === 'free' && (
-              <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center">
-                <Check size={14} className="text-white" />
-              </div>
-            )}
+            <div style={{ width: 24, height: 24, borderRadius: '50%', background: isFreeSel ? 'var(--accent)' : 'var(--bg3)', border: `2px solid ${isFreeSel ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
+              {isFreeSel && <Check size={13} color="#fff" />}
+            </div>
           </div>
-          <div className="mb-5">
-            <span className="text-3xl font-extrabold text-white">₹0</span>
-            <span className="text-slate-400 text-sm ml-1">/ month</span>
+
+          {/* Price */}
+          <div style={{ marginBottom: 22 }}>
+            <span style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 36, fontWeight: 800, color: 'var(--text1)' }}>₹0</span>
+            <span style={{ fontSize: 14, color: 'var(--text2)', marginLeft: 5 }}>/&nbsp;month</span>
           </div>
-          <div className="flex flex-col gap-3">
+
+          {/* Features */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {FREE_FEATURES.map(f => (
-              <div key={f} className="flex items-center gap-2">
-                <Check size={14} className="text-green-400 flex-shrink-0" />
-                <span className="text-slate-300 text-sm">{f}</span>
+              <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(16,185,129,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid rgba(16,185,129,0.3)' }}>
+                  <Check size={11} color="var(--green)" strokeWidth={3} />
+                </div>
+                <span style={{ fontSize: 14, color: 'var(--text1)', fontWeight: 500, lineHeight: 1.3 }}>{f}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Premium Plan */}
-        <div
-          onClick={() => setSelected('premium')}
-          className={`rounded-2xl p-6 cursor-pointer transition-all duration-300 border-2 relative overflow-hidden ${selected === 'premium' ? 'border-violet-500 glow-primary' : 'border-violet-500/30 hover:border-violet-500/60'}`}
-          style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))' }}
-        >
-          <div className="absolute top-4 right-4">
-            <span className="px-3 py-1 rounded-full text-xs font-bold badge-amber">POPULAR</span>
+        <div onClick={() => setSelected('premium')} style={{
+          borderRadius: 20, padding: '28px 24px', cursor: 'pointer',
+          background: isPremiumSel
+            ? 'linear-gradient(145deg,rgba(91,94,244,0.15),rgba(124,58,237,0.12))'
+            : 'linear-gradient(145deg,rgba(91,94,244,0.07),rgba(124,58,237,0.05))',
+          border: `2px solid ${isPremiumSel ? '#7c3aed' : 'rgba(124,58,237,0.35)'}`,
+          boxShadow: isPremiumSel ? '0 0 0 4px rgba(124,58,237,0.12)' : 'none',
+          transition: 'all 0.2s ease', position: 'relative',
+        }}>
+          {/* POPULAR badge */}
+          <div style={{ position: 'absolute', top: 16, right: 16, padding: '4px 12px', borderRadius: 99, background: 'linear-gradient(135deg,#f59e0b,#f97316)', fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: '0.05em' }}>
+            POPULAR
           </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-violet-500/30 flex items-center justify-center">
-              <Crown size={20} className="text-violet-400" />
-            </div>
-            <div>
-              <h2 className="text-white font-bold text-lg" style={{ fontFamily: 'Plus Jakarta Sans' }}>Premium Plan</h2>
-              <p className="text-slate-400 text-xs">For serious business owners</p>
-            </div>
-            {selected === 'premium' && (
-              <div className="ml-auto w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center">
-                <Check size={14} className="text-white" />
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(124,58,237,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Crown size={19} color="#a78bfa" />
               </div>
-            )}
+              <div>
+                <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--text1)', lineHeight: 1.2 }}>Premium Plan</h2>
+                <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>For serious business owners</p>
+              </div>
+            </div>
+            <div style={{ width: 24, height: 24, borderRadius: '50%', background: isPremiumSel ? '#7c3aed' : 'var(--bg3)', border: `2px solid ${isPremiumSel ? '#7c3aed' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
+              {isPremiumSel && <Check size={13} color="#fff" />}
+            </div>
           </div>
-          <div className="mb-5">
-            <span className="text-3xl font-extrabold text-white">₹999</span>
-            <span className="text-slate-400 text-sm ml-1">/ month</span>
-            <div className="text-green-400 text-xs mt-1">🎉 First month FREE during beta</div>
+
+          {/* Price */}
+          <div style={{ marginBottom: 22 }}>
+            <span style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 36, fontWeight: 800, color: 'var(--text1)' }}>₹999</span>
+            <span style={{ fontSize: 14, color: 'var(--text2)', marginLeft: 5 }}>/&nbsp;month</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginLeft: 10, padding: '3px 10px', borderRadius: 99, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.25)' }}>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--green)' }}>🎉 1st month FREE</span>
+            </div>
           </div>
-          <div className="flex flex-col gap-3">
-            {PREMIUM_FEATURES.slice(0, 7).map(f => (
-              <div key={f} className="flex items-center gap-2">
-                <Check size={14} className="text-violet-400 flex-shrink-0" />
-                <span className="text-slate-300 text-sm">{f}</span>
+
+          {/* Features */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {PREMIUM_FEATURES.map(f => (
+              <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(167,139,250,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid rgba(167,139,250,0.35)' }}>
+                  <Check size={11} color="#a78bfa" strokeWidth={3} />
+                </div>
+                <span style={{ fontSize: 14, color: 'var(--text1)', fontWeight: 500, lineHeight: 1.3 }}>{f}</span>
               </div>
             ))}
           </div>
@@ -132,19 +166,23 @@ export default function PlanPage() {
       </div>
 
       {/* CTA */}
-      <div className="mt-8 w-full max-w-3xl animate-fade-up delay-200">
-        <button onClick={handleContinue} disabled={loading}
-          className="btn-primary w-full py-4 text-base flex items-center justify-center gap-3">
-          {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-          {loading ? 'Setting up...' : (
-            <>
-              Continue with {selected === 'free' ? 'Free' : 'Premium'} Plan
-              <ArrowRight size={18} />
-            </>
-          )}
+      <div style={{ width: '100%', maxWidth: 780 }} className="animate-fade-up delay-200">
+        <button onClick={handleContinue} disabled={loading} className="btn btn-primary"
+          style={{ width: '100%', justifyContent: 'center', padding: '15px 24px', fontSize: 15, borderRadius: 14 }}>
+          {loading
+            ? <><div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', animation: 'spin 0.7s linear infinite' }} /> Setting up…</>
+            : <>Continue with {isFreeSel ? 'Free' : 'Premium'} Plan <ArrowRight size={17} /></>
+          }
         </button>
-        <p className="text-center text-slate-500 text-xs mt-3">You can upgrade or downgrade anytime from your dashboard</p>
+        <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text3)', marginTop: 12 }}>
+          You can upgrade or downgrade anytime from your dashboard
+        </p>
       </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 640px) { .plan-grid { grid-template-columns: 1fr !important; } }
+      `}</style>
     </div>
   );
 }

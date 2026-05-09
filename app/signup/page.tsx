@@ -2,17 +2,27 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { saveAuth } from '@/lib/store';
-import { Eye, EyeOff, Building2, CheckCircle2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { apiSignup } from '@/lib/apiClient';
+import { Eye, EyeOff, ArrowRight, CheckCircle2, Loader2, ShieldCheck, Zap, Building2 } from 'lucide-react';
+
+const ThreeBackground = dynamic(() => import('@/components/ThreeBackground'), { ssr: false });
+
+const PERKS = [
+  { icon: ShieldCheck, text: 'GST & compliance tracking' },
+  { icon: Zap,         text: 'AI assistant powered by Groq' },
+  { icon: Building2,   text: 'Government scheme matcher' },
+  { icon: CheckCircle2,text: 'Smart deadline alerts' },
+];
 
 export default function SignupPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
-  const [showPw, setShowPw] = useState(false);
+  const [form,    setForm]    = useState({ name:'', email:'', password:'', confirm:'' });
+  const [showPw,  setShowPw]  = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error,   setError]   = useState('');
 
-  const update = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,126 +30,148 @@ export default function SignupPage() {
     if (form.password !== form.confirm) { setError('Passwords do not match'); return; }
     if (form.password.length < 6) { setError('Password must be at least 6 characters'); return; }
     setLoading(true); setError('');
-    await new Promise(r => setTimeout(r, 1000));
-    saveAuth({ name: form.name, email: form.email });
-    router.push('/plan');
+    try {
+      await apiSignup(form.name, form.email, form.password);
+      router.push('/plan');
+    } catch (err: any) {
+      setError(err.message || 'Signup failed');
+    } finally { setLoading(false); }
   };
 
-  const handleGoogle = async () => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    saveAuth({ name: 'Business Owner', email: 'owner@mybusiness.com' });
-    router.push('/plan');
+  const inputS: React.CSSProperties = {
+    width:'100%', padding:'11px 14px', fontSize:14, color:'var(--text1)',
+    background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)',
+    borderRadius:10, outline:'none', fontFamily:'inherit', boxSizing:'border-box',
+    transition:'border-color 0.18s, box-shadow 0.18s', backdropFilter:'blur(4px)',
   };
-
-  const perks = ['Free compliance tracking', 'AI chatbot (10 queries/day)', 'GST deadline reminders', 'Government scheme alerts'];
 
   return (
-    <div className="mesh-bg grid-pattern min-h-screen flex items-center justify-center px-6 py-12">
-      <div className="w-full max-w-4xl grid lg:grid-cols-2 gap-8 items-center">
+    <div style={{ minHeight:'100vh', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', padding:'40px 20px', background:'linear-gradient(135deg,#06080f 0%,#0d1128 50%,#0a0e1f 100%)' }}>
+
+      {/* Three.js background */}
+      <ThreeBackground />
+
+      {/* Radial glows */}
+      <div style={{ position:'fixed', top:'-20%', left:'-10%', width:'60vw', height:'60vw', borderRadius:'50%', background:'radial-gradient(circle,rgba(91,94,244,0.12) 0%,transparent 70%)', pointerEvents:'none', zIndex:1 }} />
+      <div style={{ position:'fixed', bottom:'-20%', right:'-10%', width:'50vw', height:'50vw', borderRadius:'50%', background:'radial-gradient(circle,rgba(124,58,237,0.1) 0%,transparent 70%)', pointerEvents:'none', zIndex:1 }} />
+
+      {/* Content */}
+      <div style={{ position:'relative', zIndex:10, width:'100%', maxWidth:900, display:'grid', gridTemplateColumns:'1fr 1fr', gap:56, alignItems:'center' }} className="signup-grid">
+
         {/* Left */}
-        <div className="hidden lg:block animate-fade-up">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center animate-pulse-glow">
-              <Building2 size={20} className="text-white" />
+        <div className="signup-left">
+          {/* Logo */}
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:36 }}>
+            <div style={{ width:42, height:42, borderRadius:13, background:'linear-gradient(135deg,#5b5ef4,#7c3aed)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 24px rgba(91,94,244,0.5)' }}>
+              <ShieldCheck size={20} color="#fff" />
             </div>
-            <span className="text-xl font-bold text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>MSME Copilot</span>
+            <div>
+              <span style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:800, fontSize:19, color:'#fff', letterSpacing:'-0.02em' }}>CompliEase</span>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', letterSpacing:'0.08em', fontWeight:500, marginTop:1 }}>AI COMPLIANCE PLATFORM</div>
+            </div>
           </div>
-          <h1 className="text-4xl font-extrabold text-white mb-4" style={{ fontFamily: 'Plus Jakarta Sans' }}>
-            Start Your Free<br /><span className="gradient-text">Business Journey</span>
+
+          <h1 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:38, fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:14, letterSpacing:'-0.035em' }}>
+            Start Your Free<br />
+            <span style={{ background:'linear-gradient(135deg,#818cf8,#a78bfa,#38bdf8)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+              Compliance Journey
+            </span>
           </h1>
-          <p className="text-slate-400 mb-8 leading-relaxed">Join 50,000+ Indian businesses managing compliance stress-free with AI.</p>
-          <div className="flex flex-col gap-3">
-            {perks.map(p => (
-              <div key={p} className="flex items-center gap-3">
-                <CheckCircle2 size={18} className="text-green-400 flex-shrink-0" />
-                <span className="text-slate-300 text-sm">{p}</span>
+
+          <p style={{ fontSize:15, color:'rgba(255,255,255,0.55)', lineHeight:1.7, marginBottom:32, maxWidth:360 }}>
+            Join 50,000+ Indian businesses simplifying compliance with AI. No CA needed.
+          </p>
+
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            {PERKS.map(({ icon: Icon, text }) => (
+              <div key={text} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                <div style={{ width:32, height:32, borderRadius:9, background:'rgba(91,94,244,0.2)', border:'1px solid rgba(91,94,244,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <Icon size={14} color="#818cf8" />
+                </div>
+                <span style={{ fontSize:14, color:'rgba(255,255,255,0.75)', fontWeight:500 }}>{text}</span>
               </div>
             ))}
           </div>
-          <div className="mt-10 p-5 glass rounded-xl border border-indigo-500/10">
-            <p className="text-slate-300 text-sm italic mb-3">"MSME Copilot saved us from a ₹50,000 GST penalty. The AI reminded us 2 weeks before the deadline!"</p>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-sm">R</div>
-              <div>
-                <p className="text-white text-xs font-medium">Ramesh Kumar</p>
-                <p className="text-slate-500 text-xs">Restaurant Owner, Pune</p>
-              </div>
-            </div>
+
+          {/* Trust badges */}
+          <div style={{ display:'flex', alignItems:'center', gap:16, marginTop:36, padding:'14px 18px', borderRadius:12, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)' }}>
+            {['🔐 JWT Secured','☁️ MongoDB Atlas','🤖 Groq AI'].map(b => (
+              <span key={b} style={{ fontSize:12, color:'rgba(255,255,255,0.45)', fontWeight:500 }}>{b}</span>
+            ))}
           </div>
         </div>
 
-        {/* Right — Form */}
-        <div className="animate-fade-up delay-100">
+        {/* Right — form */}
+        <div style={{ background:'rgba(255,255,255,0.04)', backdropFilter:'blur(20px)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:22, padding:'36px 32px', boxShadow:'0 24px 64px rgba(0,0,0,0.4)' }}>
+
           {/* Mobile logo */}
-          <div className="flex lg:hidden items-center gap-3 mb-6">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-              <Building2 size={18} className="text-white" />
+          <div className="signup-mobile-logo" style={{ display:'none', alignItems:'center', gap:10, marginBottom:24 }}>
+            <div style={{ width:34, height:34, borderRadius:10, background:'linear-gradient(135deg,#5b5ef4,#7c3aed)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <ShieldCheck size={16} color="#fff" />
             </div>
-            <span className="text-lg font-bold text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>MSME Copilot</span>
+            <span style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:800, fontSize:16, color:'#fff' }}>CompliEase</span>
           </div>
 
-          <div className="glass rounded-2xl p-8 border border-indigo-500/10">
-            <h2 className="text-2xl font-bold text-white mb-1" style={{ fontFamily: 'Plus Jakarta Sans' }}>Create Account</h2>
-            <p className="text-slate-400 text-sm mb-6">Free forever — no credit card required</p>
+          <h2 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:22, fontWeight:700, color:'#fff', marginBottom:4 }}>Create Account</h2>
+          <p style={{ fontSize:13, color:'rgba(255,255,255,0.45)', marginBottom:24 }}>Free forever — no credit card required</p>
 
-            {error && <div className="alert-urgent rounded-xl p-3 mb-4 text-red-400 text-sm">{error}</div>}
+          {error && (
+            <div style={{ padding:'10px 14px', borderRadius:10, background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', color:'#f87171', fontSize:13, marginBottom:18 }}>{error}</div>
+          )}
 
-            <form onSubmit={handleSignup} className="flex flex-col gap-4">
-              <div>
-                <label className="text-slate-300 text-sm font-medium block mb-2">Full Name</label>
-                <input type="text" value={form.name} onChange={e => update('name', e.target.value)}
-                  placeholder="Ramesh Kumar" className="input-glass w-full px-4 py-3 text-sm" />
-              </div>
-              <div>
-                <label className="text-slate-300 text-sm font-medium block mb-2">Email Address</label>
-                <input type="email" value={form.email} onChange={e => update('email', e.target.value)}
-                  placeholder="you@business.com" className="input-glass w-full px-4 py-3 text-sm" />
-              </div>
-              <div>
-                <label className="text-slate-300 text-sm font-medium block mb-2">Password</label>
-                <div className="relative">
-                  <input type={showPw ? 'text' : 'password'} value={form.password} onChange={e => update('password', e.target.value)}
-                    placeholder="Min. 6 characters" className="input-glass w-full px-4 py-3 pr-12 text-sm" />
-                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors">
-                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+          <form onSubmit={handleSignup} style={{ display:'flex', flexDirection:'column', gap:15 }}>
+            {[
+              { k:'name',    label:'Full Name',        type:'text',     ph:'Ramesh Kumar' },
+              { k:'email',   label:'Email Address',    type:'email',    ph:'you@business.com' },
+              { k:'password',label:'Password',         type:'password', ph:'Min. 6 characters', pw:true },
+              { k:'confirm', label:'Confirm Password', type:'password', ph:'Repeat password' },
+            ].map(({ k, label, type, ph, pw }) => (
+              <div key={k}>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:'rgba(255,255,255,0.65)', marginBottom:6, letterSpacing:'0.02em' }}>{label}</label>
+                <div style={{ position:'relative' }}>
+                  <input
+                    type={pw ? (showPw ? 'text' : 'password') : type}
+                    value={form[k as keyof typeof form]}
+                    onChange={e => upd(k, e.target.value)}
+                    placeholder={ph}
+                    style={{ ...inputS, paddingRight: pw ? 44 : 14 }}
+                    onFocus={e => { e.target.style.borderColor='rgba(91,94,244,0.7)'; e.target.style.boxShadow='0 0 0 3px rgba(91,94,244,0.18)'; }}
+                    onBlur={e  => { e.target.style.borderColor='rgba(255,255,255,0.12)'; e.target.style.boxShadow='none'; }}
+                  />
+                  {pw && (
+                    <button type="button" onClick={() => setShowPw(s => !s)}
+                      style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', display:'flex', alignItems:'center' }}>
+                      {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  )}
                 </div>
               </div>
-              <div>
-                <label className="text-slate-300 text-sm font-medium block mb-2">Confirm Password</label>
-                <input type="password" value={form.confirm} onChange={e => update('confirm', e.target.value)}
-                  placeholder="Repeat password" className="input-glass w-full px-4 py-3 text-sm" />
-              </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2">
-                {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                {loading ? 'Creating account...' : 'Create Free Account →'}
-              </button>
-            </form>
+            ))}
 
-            <div className="flex items-center gap-4 my-5">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="text-slate-500 text-xs">or</span>
-              <div className="flex-1 h-px bg-white/10" />
-            </div>
-
-            <button onClick={handleGoogle} disabled={loading} className="btn-secondary w-full py-3 text-sm flex items-center justify-center gap-3">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908C16.658 14.116 17.64 11.836 17.64 9.2z" fill="#4285F4"/>
-                <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-                <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
-                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-              </svg>
-              Continue with Google
+            <button type="submit" disabled={loading}
+              style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'13px', fontSize:14, fontWeight:700, borderRadius:12, border:'none', cursor: loading ? 'not-allowed' : 'pointer', background:'linear-gradient(135deg,#5b5ef4,#7c3aed)', color:'#fff', marginTop:4, transition:'opacity 0.2s, transform 0.15s', opacity: loading ? 0.75 : 1, fontFamily:'inherit' }}
+              onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.transform='translateY(-1px)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform=''; }}>
+              {loading ? <><Loader2 size={15} style={{ animation:'spin 0.7s linear infinite' }} /> Creating account…</> : <>Create Free Account <ArrowRight size={15} /></>}
             </button>
+          </form>
 
-            <p className="text-center text-slate-500 text-xs mt-5">
-              Already have an account?{' '}
-              <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">Sign in</Link>
-            </p>
-          </div>
+          <p style={{ textAlign:'center', fontSize:13, color:'rgba(255,255,255,0.4)', marginTop:20 }}>
+            Already have an account?{' '}
+            <Link href="/login" style={{ color:'#818cf8', fontWeight:600 }}>Sign in →</Link>
+          </p>
         </div>
       </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 860px) {
+          .signup-grid { grid-template-columns: 1fr !important; max-width: 440px !important; }
+          .signup-left { display: none !important; }
+          .signup-mobile-logo { display: flex !important; }
+        }
+        input::placeholder { color: rgba(255,255,255,0.25); }
+      `}</style>
     </div>
   );
 }

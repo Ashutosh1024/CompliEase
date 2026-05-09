@@ -1,148 +1,150 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
-import { getProfile, getChatHistory, saveChatHistory } from '@/lib/store';
-import { getAIResponse } from '@/lib/compliance-data';
-import { ChatMessage, BusinessProfile } from '@/lib/types';
-import { Bot, Send, RefreshCw, Sparkles } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Send, Bot, User, Loader2, Lightbulb } from 'lucide-react';
+import { apiChat, apiGetProfile, getToken } from '@/lib/apiClient';
 
-const SUGGESTED = [
-  'Do I need GST registration?', 'How to get Mudra loan?',
-  'What is Udyam registration?', 'Which licenses do I need?',
-  'When is GST filing due?', 'Tell me about PMEGP', 'How to file ITR?',
+interface Message { role: 'user'|'assistant'; content: string; }
+
+const SUGGESTIONS = [
+  'What is Udyam registration and how do I apply?',
+  'When is my next GST return due?',
+  'Am I eligible for Mudra loan?',
+  'What are the GST rates for my business?',
+  'How do I file GSTR-3B?',
+  'What is the penalty for late GST filing?',
 ];
 
-const WELCOME: ChatMessage = {
-  id: 'welcome', role: 'assistant', timestamp: new Date(),
-  content: "Hello! 👋 I'm your **AI Business Compliance Assistant**.\n\nI can help with:\n- 📋 GST registration & filing\n- 🏛️ Government schemes (Mudra, PMEGP)\n- 📄 MSME/Udyam registration\n- 🏪 Shop Act, FSSAI, Trade License\n- 📅 Tax deadlines & filings\n\nWhat would you like to know?",
-};
-
-function Bubble({ msg }: { msg: ChatMessage }) {
-  const isAI = msg.role === 'assistant';
-  const format = (t: string) => t.split('\n').map((l, i) => {
-    const html = l.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    return <p key={i} style={{ minHeight: l === '' ? '10px' : undefined, fontSize: 13.5, lineHeight: 1.65, color: isAI ? 'var(--text1)' : '#fff' }} dangerouslySetInnerHTML={{ __html: html }} />;
-  });
-  return (
-    <div style={{ display: 'flex', gap: 10, flexDirection: isAI ? 'row' : 'row-reverse', animation: 'fadeUp 0.3s ease both' }}>
-      {isAI && (
-        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg,#5b5ef4,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-          <Bot size={15} color="#fff" />
-        </div>
-      )}
-      <div style={{ maxWidth: '78%', padding: '10px 14px', borderRadius: isAI ? '4px 16px 16px 16px' : '16px 4px 16px 16px', background: isAI ? 'var(--card)' : 'linear-gradient(135deg,#5b5ef4,#7c3aed)', border: isAI ? '1px solid var(--border)' : 'none' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>{format(msg.content)}</div>
-        <p style={{ fontSize: 10.5, marginTop: 6, color: isAI ? 'var(--text3)' : 'rgba(255,255,255,0.55)' }}>
-          {new Date(msg.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function Typing() {
-  return (
-    <div style={{ display: 'flex', gap: 10 }}>
-      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg,#5b5ef4,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Bot size={15} color="#fff" />
-      </div>
-      <div style={{ padding: '12px 16px', borderRadius: '4px 16px 16px 16px', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" />
-      </div>
-    </div>
-  );
+function renderMarkdown(text: string) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code style="background:rgba(91,94,244,0.12);padding:2px 6px;border-radius:5px;font-size:0.92em">$1</code>')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>')
+    .replace(/^#{1,3}\s(.+)/gm, '<strong style="font-size:1.05em">$1</strong>');
 }
 
 export default function AIAssistantPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+  const [messages, setMessages] = useState<Message[]>([
+    { role:'assistant', content:'Hello! I\'m your MSME Compliance AI, powered by Groq. I can help you with GST, Udyam registration, government schemes, compliance deadlines, and all Indian business regulations. What would you like to know?' }
+  ]);
   const [input,    setInput]    = useState('');
   const [loading,  setLoading]  = useState(false);
-  const [profile,  setProfile]  = useState<BusinessProfile | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef  = useRef<HTMLInputElement>(null);
+  const [profile,  setProfile]  = useState<Record<string,unknown> | null>(null);
+  const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const p = getProfile(); setProfile(p);
-    const h = getChatHistory();
-    if (h.length) setMessages([WELCOME, ...h]);
+    const token = getToken();
+    if (!token) return;
+    apiGetProfile().then(p => { if (p) setProfile(p); }).catch(() => {});
   }, []);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior:'smooth' });
+  }, [messages, loading]);
 
   const send = async (text?: string) => {
-    const msg = text || input.trim();
+    const msg = (text || input).trim();
     if (!msg || loading) return;
     setInput('');
-    const user: ChatMessage = { id: Date.now().toString(), role: 'user', content: msg, timestamp: new Date() };
-    setMessages(p => [...p, user]);
+    const userMsg: Message = { role:'user', content: msg };
+    setMessages(prev => [...prev, userMsg]);
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800 + Math.random() * 500));
-    const reply = getAIResponse(msg, profile);
-    const ai: ChatMessage = { id: (Date.now() + 1).toString(), role: 'assistant', content: reply, timestamp: new Date() };
-    setMessages(p => { const u = [...p, ai]; saveChatHistory(u.filter(m => m.id !== 'welcome')); return u; });
-    setLoading(false);
-    inputRef.current?.focus();
+    try {
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      const reply = await apiChat(msg, history, profile || undefined);
+      setMessages(prev => [...prev, { role:'assistant', content: reply }]);
+    } catch (err: any) {
+      setMessages(prev => [...prev, { role:'assistant', content: `Sorry, I encountered an error: ${err.message}. Please try again.` }]);
+    } finally { setLoading(false); }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: '24px 24px 20px' }}>
+    <div className="page-content" style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 60px)', padding:0 }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#5b5ef4,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ padding:'20px 28px 16px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ width:40, height:40, borderRadius:12, background:'linear-gradient(135deg,#5b5ef4,#7c3aed)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(91,94,244,0.35)' }}>
             <Bot size={20} color="#fff" />
           </div>
           <div>
-            <h1 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--text1)' }}>AI Compliance Assistant</h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', display: 'inline-block', boxShadow: '0 0 8px var(--green)' }} />
-              <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--green)' }}>Online · MSME Expert</span>
-            </div>
+            <h1 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:17, fontWeight:700, color:'var(--text1)', lineHeight:1.2 }}>MSME AI Assistant</h1>
+            <p style={{ fontSize:12, color:'var(--green)', display:'flex', alignItems:'center', gap:5, marginTop:2 }}>
+              <span style={{ width:7, height:7, borderRadius:'50%', background:'var(--green)', display:'inline-block' }} />
+              Powered by Groq · {profile ? `Context: ${(profile as any).businessName}` : 'Online'}
+            </p>
           </div>
         </div>
-        <button onClick={() => { setMessages([WELCOME]); saveChatHistory([]); }} className="btn btn-secondary" style={{ gap: 7, fontSize: 13 }}>
-          <RefreshCw size={14} /> Clear
-        </button>
       </div>
 
       {/* Suggestions */}
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 10, marginBottom: 14, scrollbarWidth: 'none', flexShrink: 0 }}>
-        {SUGGESTED.map(q => (
-          <button key={q} onClick={() => send(q)} disabled={loading}
-            style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: '1px solid rgba(91,94,244,0.3)', background: 'transparent', color: 'var(--accent)', transition: 'background 0.15s', display: 'flex', alignItems: 'center', gap: 5 }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(91,94,244,0.1)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}>
-            <Sparkles size={10} /> {q}
-          </button>
-        ))}
-      </div>
-
-      {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, paddingRight: 4, marginBottom: 14 }}>
-        {messages.map(m => <Bubble key={m.id} msg={m} />)}
-        {loading && <Typing />}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Context */}
-      {profile && (
-        <div style={{ marginBottom: 12, padding: '8px 14px', borderRadius: 10, background: 'var(--bg3)', border: '1px solid var(--border)', fontSize: 12, color: 'var(--text2)', flexShrink: 0 }}>
-          <span style={{ fontWeight: 600, color: 'var(--accent)' }}>Context:</span> {profile.businessName} · {profile.industryCategory} · {profile.state}
+      {messages.length <= 1 && (
+        <div style={{ padding:'16px 28px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
+          <p style={{ fontSize:12, color:'var(--text3)', marginBottom:10, display:'flex', alignItems:'center', gap:5 }}>
+            <Lightbulb size={12} /> Quick questions:
+          </p>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+            {SUGGESTIONS.map(s => (
+              <button key={s} onClick={() => send(s)}
+                style={{ padding:'6px 14px', borderRadius:99, fontSize:12.5, fontWeight:500, cursor:'pointer', border:'1px solid var(--border)', background:'var(--bg3)', color:'var(--text2)', transition:'all 0.15s', outline:'none' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor='var(--accent)'; (e.currentTarget as HTMLButtonElement).style.color='var(--accent)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor='var(--border)'; (e.currentTarget as HTMLButtonElement).style.color='var(--text2)'; }}>
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Input */}
-      <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-        <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
-          placeholder="Ask about GST, licenses, schemes, deadlines…"
-          disabled={loading} className="input" style={{ flex: 1, fontSize: 14 }} />
-        <button onClick={() => send()} disabled={!input.trim() || loading}
-          className="btn btn-primary" style={{ width: 46, height: 46, padding: 0, borderRadius: 12, flexShrink: 0 }}>
-          <Send size={17} />
-        </button>
+      {/* Messages */}
+      <div style={{ flex:1, overflowY:'auto', padding:'20px 28px', display:'flex', flexDirection:'column', gap:16 }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{ display:'flex', gap:12, flexDirection: m.role==='user' ? 'row-reverse' : 'row', alignItems:'flex-start' }}>
+            <div style={{ width:34, height:34, borderRadius:10, background: m.role==='user' ? 'var(--accent)' : 'linear-gradient(135deg,#5b5ef4,#7c3aed)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              {m.role==='user' ? <User size={16} color="#fff" /> : <Bot size={16} color="#fff" />}
+            </div>
+            <div style={{ maxWidth:'75%', padding:'12px 16px', borderRadius: m.role==='user' ? '14px 4px 14px 14px' : '4px 14px 14px 14px', background: m.role==='user' ? 'var(--accent)' : 'var(--card)', border: m.role==='user' ? 'none' : '1px solid var(--border)', color: m.role==='user' ? '#fff' : 'var(--text1)', fontSize:13.5, lineHeight:1.65, wordBreak:'break-word' }}
+              dangerouslySetInnerHTML={{ __html: m.role==='assistant' ? renderMarkdown(m.content) : m.content.replace(/\n/g,'<br/>') }} />
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display:'flex', gap:12, alignItems:'flex-start' }}>
+            <div style={{ width:34, height:34, borderRadius:10, background:'linear-gradient(135deg,#5b5ef4,#7c3aed)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <Bot size={16} color="#fff" />
+            </div>
+            <div style={{ padding:'12px 18px', borderRadius:'4px 14px 14px 14px', background:'var(--card)', border:'1px solid var(--border)', display:'flex', alignItems:'center', gap:8 }}>
+              <Loader2 size={14} color="var(--accent)" style={{ animation:'spin 0.8s linear infinite' }} />
+              <span style={{ fontSize:13, color:'var(--text2)' }}>Thinking…</span>
+            </div>
+          </div>
+        )}
+        <div ref={endRef} />
       </div>
 
-      <style>{`@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }`}</style>
+      {/* Input */}
+      <div style={{ padding:'16px 28px', borderTop:'1px solid var(--border)', flexShrink:0 }}>
+        <div style={{ display:'flex', gap:10, alignItems:'flex-end' }}>
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+            placeholder="Ask about GST, compliance, government schemes… (Enter to send)"
+            rows={1}
+            style={{ flex:1, padding:'12px 14px', fontSize:14, color:'var(--text1)', background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:12, outline:'none', resize:'none', fontFamily:'inherit', lineHeight:1.5, minHeight:44, maxHeight:120 }}
+            onFocus={e => { e.target.style.borderColor='var(--accent)'; e.target.style.boxShadow='0 0 0 3px rgba(91,94,244,0.15)'; }}
+            onBlur={e  => { e.target.style.borderColor='var(--input-border)'; e.target.style.boxShadow='none'; }}
+          />
+          <button onClick={() => send()} disabled={!input.trim() || loading} className="btn btn-primary"
+            style={{ padding:'12px 16px', borderRadius:12, flexShrink:0, opacity: !input.trim() || loading ? 0.5 : 1, transition:'opacity 0.15s' }}>
+            <Send size={16} />
+          </button>
+        </div>
+        <p style={{ fontSize:11.5, color:'var(--text3)', marginTop:8, textAlign:'center' }}>
+          AI may make mistakes. Verify important compliance dates with official government portals.
+        </p>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
     </div>
   );
 }

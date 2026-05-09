@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { clearAuth, getAuth } from '@/lib/store';
+import { apiLogout, getStoredUser } from '@/lib/apiClient';
 import { useTheme } from './ThemeProvider';
 import {
   LayoutDashboard, Bot, ClipboardList, Calendar, Landmark,
@@ -37,9 +37,10 @@ export default function Sidebar({ businessName }: { businessName?: string }) {
   const [userName,   setUserName]   = useState('');
 
   useEffect(() => {
-    const a = getAuth();
-    if (a?.name) setUserName(a.name);
+    const u = getStoredUser();
+    if (u?.name) setUserName(u.name);
   }, []);
+
 
   const isActive = (href: string) =>
     href === '/dashboard' ? pathname === href : pathname.startsWith(href);
@@ -48,7 +49,7 @@ export default function Sidebar({ businessName }: { businessName?: string }) {
     ? userName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : '?';
 
-  const logout = () => { clearAuth(); router.push('/login'); };
+  const logout = () => { apiLogout(); router.push('/login'); };
 
   function NavContent({ onNav }: { onNav?: () => void }) {
     return (
@@ -66,7 +67,7 @@ export default function Sidebar({ businessName }: { businessName?: string }) {
           {!collapsed && (
             <div style={{ minWidth: 0 }}>
               <p style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, fontSize: 14, color: 'var(--text1)', lineHeight: 1.2 }}>
-                MSME Copilot
+                CompliEase
               </p>
               {businessName && (
                 <p style={{ fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
