@@ -14,6 +14,7 @@ export interface BusinessProfile {
   // Registration
   gstNumber: string;
   panNumber: string;
+  aadhaarNumber: string;  // 12-digit Aadhaar (masked in UI)
   udyamNumber: string;
   cinNumber: string;
   hasTradeLicense: boolean;

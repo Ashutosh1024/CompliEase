@@ -7,7 +7,7 @@ import { User, Save, Edit3, CheckCircle2, Building2, Phone, Mail, MapPin, BarCha
 const SECTIONS = [
   { title: 'Personal Details',  icon: User,       color: '#818cf8', fields: [{ l: 'Full Name', k: 'fullName' }, { l: 'Mobile', k: 'mobile' }, { l: 'Email', k: 'email' }] },
   { title: 'Business Details',  icon: Building2,  color: '#22d3ee', fields: [{ l: 'Business Name', k: 'businessName' }, { l: 'Industry', k: 'industryCategory' }, { l: 'Structure', k: 'businessStructure' }, { l: 'Nature', k: 'natureOfBusiness' }] },
-  { title: 'Registrations',     icon: FileText,   color: '#34d399', fields: [{ l: 'GST Number', k: 'gstNumber' }, { l: 'PAN Number', k: 'panNumber' }, { l: 'Udyam Number', k: 'udyamNumber' }, { l: 'CIN Number', k: 'cinNumber' }] },
+  { title: 'Registrations',     icon: FileText,   color: '#34d399', fields: [{ l: 'GST Number', k: 'gstNumber' }, { l: 'PAN Number', k: 'panNumber' }, { l: 'Aadhaar Number', k: 'aadhaarNumber', mask: true }, { l: 'Udyam Number', k: 'udyamNumber' }, { l: 'CIN Number', k: 'cinNumber' }] },
   { title: 'Location',          icon: MapPin,     color: '#fbbf24', fields: [{ l: 'State', k: 'state' }, { l: 'District', k: 'district' }, { l: 'PIN Code', k: 'pinCode' }, { l: 'Address', k: 'address' }] },
   { title: 'Operations',        icon: BarChart3,  color: '#f472b6', fields: [{ l: 'Annual Turnover', k: 'annualTurnover' }, { l: 'Employee Count', k: 'employeeCount' }, { l: 'Year Established', k: 'yearEstablished' }] },
 ] as const;
@@ -20,10 +20,18 @@ export default function ProfilePage() {
 
   useEffect(() => { setProfile(getProfile()); setAuth(getAuth()); }, []);
 
-  const save = () => {
+  const save = async () => {
     if (!profile) return;
-    saveProfile(profile); setSaved(true); setEditing(false);
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      const { apiSaveProfile } = await import('@/lib/apiClient');
+      await apiSaveProfile(profile); // Save to database
+      saveProfile(profile); // Save to local storage
+      setSaved(true); 
+      setEditing(false);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e) {
+      alert('Failed to save profile to database.');
+    }
   };
 
   if (!profile) return (
@@ -34,7 +42,7 @@ export default function ProfilePage() {
   );
 
   const initials = profile.fullName?.[0]?.toUpperCase() || 'B';
-  const checks   = [!!profile.gstNumber, !!profile.udyamNumber, !!profile.panNumber, !!profile.hasFSSAI, !!profile.hasShopAct];
+  const checks   = [!!profile.gstNumber, !!profile.udyamNumber, !!profile.panNumber, !!profile.aadhaarNumber, !!profile.hasFSSAI, !!profile.hasShopAct];
   const score    = Math.round((checks.filter(Boolean).length / checks.length) * 100);
   const scoreColor = score >= 80 ? 'var(--green)' : score >= 50 ? 'var(--amber)' : 'var(--red)';
 
@@ -98,6 +106,7 @@ export default function ProfilePage() {
             { l: 'GST',        ok: !!profile.gstNumber },
             { l: 'Udyam',      ok: !!profile.udyamNumber },
             { l: 'PAN',        ok: !!profile.panNumber },
+            { l: 'Aadhaar',    ok: !!profile.aadhaarNumber },
             { l: 'FSSAI',      ok: !!profile.hasFSSAI },
             { l: 'Shop Act',   ok: !!profile.hasShopAct },
           ].map(({ l, ok }) => (
@@ -120,18 +129,33 @@ export default function ProfilePage() {
             {title}
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }}>
-            {fields.map(({ l, k }) => (
+            {fields.map(({ l, k, mask }: any) => {
+              const raw = (profile[k as keyof BusinessProfile] as string) || '';
+              const display = mask && raw.length === 12
+                ? `XXXX XXXX ${raw.slice(-4)}`
+                : raw;
+              return (
               <div key={k}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text3)', marginBottom: 6 }}>{l}</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text3)', marginBottom: 6 }}>
+                  {l} {mask && raw && <span style={{ fontSize:10, color:'var(--green)', background:'rgba(16,185,129,0.1)', padding:'1px 6px', borderRadius:99, marginLeft:4 }}>🔒 Masked</span>}
+                </label>
                 {editing ? (
-                  <input className="input" value={(profile[k as keyof BusinessProfile] as string) || ''} onChange={e => setProfile(p => p ? { ...p, [k]: e.target.value } : p)} placeholder={`Enter ${l.toLowerCase()}`} />
+                  <input className="input" value={raw}
+                    onChange={e => {
+                      const v = mask ? e.target.value.replace(/\D/g,'').slice(0,12) : e.target.value;
+                      setProfile(p => p ? { ...p, [k]: v } : p);
+                    }}
+                    placeholder={mask ? 'XXXX XXXX XXXX (12 digits)' : `Enter ${l.toLowerCase()}`}
+                    maxLength={mask ? 12 : undefined}
+                  />
                 ) : (
-                  <div style={{ padding: '9px 12px', borderRadius: 10, background: 'var(--bg3)', fontSize: 14, fontWeight: 500, color: (profile[k as keyof BusinessProfile] as string) ? 'var(--text1)' : 'var(--text3)' }}>
-                    {(profile[k as keyof BusinessProfile] as string) || '—'}
+                  <div style={{ padding: '9px 12px', borderRadius: 10, background: 'var(--bg3)', fontSize: 14, fontWeight: 500, color: raw ? 'var(--text1)' : 'var(--text3)', letterSpacing: mask && raw ? '0.05em' : 'normal' }}>
+                    {display || '—'}
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}

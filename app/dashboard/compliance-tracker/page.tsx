@@ -32,11 +32,13 @@ const PORTAL_LINKS: Record<string,{ label:string; url:string }> = {
 const MISSING_FIELDS: Record<string,{ label:string; field:string }> = {
   'gst-reg': { label:'Enter your GST Number', field:'gstNumber' },
   'pan':     { label:'Enter your PAN Number',   field:'panNumber' },
+  'aadhaar': { label:'Enter your Aadhaar Number', field:'aadhaarNumber' },
   'udyam':   { label:'Enter your Udyam Number', field:'udyamNumber' },
   'fssai':   { label:'Mark FSSAI as obtained',  field:'hasFSSAI' },
   'shop-act':{ label:'Mark Shop Act as obtained',field:'hasShopAct' },
   'trade':   { label:'Mark Trade License as obtained', field:'hasTradeLicense' },
 };
+
 
 export default function ComplianceTrackerPage() {
   const [items,   setItems]   = useState<ComplianceItem[]>([]);
@@ -67,6 +69,7 @@ export default function ComplianceTrackerPage() {
     setSaving(true);
     try {
       const { getToken } = await import('@/lib/apiClient');
+      const { saveProfile } = await import('@/lib/store');
       const token = getToken();
       const update = { [field]: val };
       await fetch('/api/profile', {
@@ -76,6 +79,7 @@ export default function ComplianceTrackerPage() {
       });
       const updated = { ...profile!, ...update } as BusinessProfile;
       setProfile(updated);
+      saveProfile(updated); // Sync to local storage
       setItems(analyzeCompliance(updated));
       setFillId(null); setFillVal('');
     } catch (e) { alert('Failed to save'); }

@@ -21,7 +21,7 @@ const YEARS         = Array.from({ length:30 }, (_,i) => String(new Date().getFu
 const EMPTY = {
   fullName:'', mobile:'', email:'',
   businessName:'', businessType:'', industryCategory:'', natureOfBusiness:'', businessStructure:'',
-  gstNumber:'', panNumber:'', udyamNumber:'', cinNumber:'',
+  gstNumber:'', panNumber:'', aadhaarNumber:'', udyamNumber:'', cinNumber:'',
   hasTradeLicense:false, hasFSSAI:false, hasShopAct:false,
   state:'', district:'', address:'', pinCode:'',
   annualTurnover:'', employeeCount:'', yearEstablished:'', plan:'free',
@@ -187,6 +187,21 @@ export default function OnboardingPage() {
               <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:16, marginBottom:20 }}>
                 <div>{lbl('GST Number')}<input value={profile.gstNumber} onChange={e=>upd('gstNumber',e.target.value.toUpperCase())} placeholder="22AAAAA0000A1Z5" maxLength={15} style={inputS('gstNumber')} /></div>
                 <div>{lbl('PAN Number')}<input value={profile.panNumber} onChange={e=>upd('panNumber',e.target.value.toUpperCase())} placeholder="AAAAA1234A" maxLength={10} style={inputS('panNumber')} /></div>
+                <div>{lbl('Aadhaar Number')}
+                  <input
+                    value={profile.aadhaarNumber}
+                    onChange={e => {
+                      const v = e.target.value.replace(/\D/g,'').slice(0,12);
+                      const fmt = v.replace(/(\d{4})(?=\d)/g,'$1 ').trim();
+                      upd('aadhaarNumber', v);
+                      e.target.value = fmt;
+                    }}
+                    placeholder="XXXX XXXX XXXX"
+                    maxLength={14}
+                    style={inputS('aadhaarNumber')}
+                  />
+                  <p style={{ fontSize:11, color:'var(--text3)', marginTop:4 }}>🔐 Stored encrypted — never shared</p>
+                </div>
                 <div>{lbl('Udyam Number')}<input value={profile.udyamNumber} onChange={e=>upd('udyamNumber',e.target.value.toUpperCase())} placeholder="UDYAM-XX-00-0000000" style={inputS('udyamNumber')} /></div>
                 <div>{lbl('CIN Number')}<input value={profile.cinNumber} onChange={e=>upd('cinNumber',e.target.value.toUpperCase())} placeholder="For Pvt Ltd / LLP" style={inputS('cinNumber')} /></div>
               </div>

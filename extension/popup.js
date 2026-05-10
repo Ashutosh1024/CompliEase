@@ -62,7 +62,7 @@ const FIELD_LABELS = {
   fullName:'Full Name', email:'Email', mobile:'Mobile', businessName:'Business Name',
   businessType:'Business Type', businessStructure:'Business Structure',
   industryCategory:'Industry Category', natureOfBusiness:'Nature of Business',
-  gstNumber:'GST Number', panNumber:'PAN Number', udyamNumber:'Udyam Number',
+  gstNumber:'GST Number', panNumber:'PAN Number', aadhaarNumber:'Aadhaar Number', udyamNumber:'Udyam Number',
   cinNumber:'CIN Number', state:'State', district:'District',
   address:'Address', pinCode:'PIN Code', annualTurnover:'Annual Turnover',
   employeeCount:'Employee Count', yearEstablished:'Year Established',
@@ -146,17 +146,19 @@ async function init() {
 
   // Load profile (TEE first, then API)
   currentProfile = await TEE.retrieve();
-  if (!currentProfile) {
-    try {
-      const r = await fetch(`${API_BASE}/api/extension/profile`, {
-        headers: { Authorization: `Bearer ${ce_token}` }
-      });
-      const d = await r.json();
-      if (d.profile) {
-        currentProfile = d.profile;
-        await TEE.store(currentProfile); // cache encrypted
-      }
-    } catch (e) { showMsg('⚠️ Could not reach CompliEase API', 'error'); }
+  
+  // Always fetch latest from API in background to keep data in sync
+  try {
+    const r = await fetch(`${API_BASE}/api/extension/profile`, {
+      headers: { Authorization: `Bearer ${ce_token}` }
+    });
+    const d = await r.json();
+    if (d.profile) {
+      currentProfile = d.profile;
+      await TEE.store(currentProfile); // cache encrypted
+    }
+  } catch (e) { 
+    if (!currentProfile) showMsg('⚠️ Could not reach CompliEase API', 'error'); 
   }
 
   // Detect current tab's portal
@@ -326,11 +328,14 @@ $('btn-autofill').addEventListener('click', async () => {
           email:             ['email','emailid','mail','email_id'],
           mobile:            ['mobile','phone','mobileno','contact','contactno','mob'],
           businessName:      ['business','businessname','firm','firmname','tradename','entityname','enterprise'],
+          businessType:      ['iama','type','businesstype','taxpayer','entitytype'],
+          businessStructure: ['structure','constitution','businessstructure','constitutionofbusiness'],
           panNumber:         ['pan','panno','pannumber','pan_number'],
+          aadhaarNumber:     ['aadhaar','aadhar','uidai','adharno','aadhaarnumber'],
           gstNumber:         ['gstin','gst','gstnumber','gstno','gst_number'],
           udyamNumber:       ['udyam','udyam_no','udyamno','udyam_number','msme'],
           cinNumber:         ['cin','cinno','cin_number'],
-          state:             ['state','statename','state_id'],
+          state:             ['state','statename','state_id','stateut'],
           district:          ['district','districtname'],
           address:           ['address','addr','streetaddress','fulladdress','businessaddress'],
           pinCode:           ['pincode','pin','postal','zipcode','zip'],
@@ -344,20 +349,77 @@ $('btn-autofill').addEventListener('click', async () => {
         const inputs = Array.from(document.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=button]),select,textarea'));
 
         inputs.forEach(el => {
-          const key = (el.name + ' ' + el.id + ' ' + el.placeholder + ' ' +
-            (document.querySelector(`label[for="${el.id}"]`)?.textContent || '')).toLowerCase().replace(/[^a-z0-9]/g,'');
+          let labelText = '';
+          if (el.id) {
+            labelText = document.querySelector(`label[for="${el.id}"]`)?.textContent || '';
+          }
+          if (!labelText) {
+            const lbl = el.closest('label');
+            if (lbl) labelText = lbl.textContent;
+            else {
+              const group = el.parentElement;
+              if (group) {
+                const innerLbl = group.querySelector('label') || group.parentElement?.querySelector('label');
+                if (innerLbl) labelText = innerLbl.textContent;
+              }
+            }
+          }
+
+          const key = (el.name + ' ' + el.id + ' ' + el.placeholder + ' ' + labelText)
+            .toLowerCase().replace(/[^a-z0-9]/g,'');
 
           for (const [field, keywords] of Object.entries(FIELD_MAP)) {
             if (!profile[field]) continue;
             if (keywords.some(k => key.includes(k))) {
-              const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-              if (nativeInputValueSetter && el.tagName === 'INPUT') {
-                nativeInputValueSetter.call(el, profile[field]);
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
+              const valToSet = profile[field];
+              if (el.tagName === 'SELECT') {
+                const targetVal = String(valToSet).toLowerCase().trim();
+                let matched = false;
+                // 1. Exact match by value or text
+                for (let i = 0; i < el.options.length; i++) {
+                  const opt = el.options[i];
+                  const optText = opt.text.toLowerCase().trim();
+                  const optVal = opt.value.toLowerCase().trim();
+                  if (optVal === targetVal || optText === targetVal) {
+                    el.selectedIndex = i;
+                    el.value = opt.value;
+                    matched = true;
+                    break;
+                  }
+                }
+                // 2. Partial match by text (e.g., "Delhi" vs "New Delhi")
+                if (!matched) {
+                  for (let i = 0; i < el.options.length; i++) {
+                    const opt = el.options[i];
+                    const optText = opt.text.toLowerCase().trim();
+                    if (optText && opt.value && (optText.includes(targetVal) || targetVal.includes(optText))) {
+                      el.selectedIndex = i;
+                      el.value = opt.value;
+                      matched = true;
+                      break;
+                    }
+                  }
+                }
+                
+                if (matched) {
+                  const nativeSelectValueSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')?.set;
+                  if (nativeSelectValueSetter) {
+                    nativeSelectValueSetter.call(el, el.value);
+                  }
+                  el.dispatchEvent(new Event('input', { bubbles: true }));
+                  el.dispatchEvent(new Event('change', { bubbles: true }));
+                }
               } else {
-                el.value = profile[field];
-                el.dispatchEvent(new Event('change', { bubbles: true }));
+                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                if (nativeInputValueSetter && el.tagName === 'INPUT') {
+                  nativeInputValueSetter.call(el, valToSet);
+                  el.dispatchEvent(new Event('input', { bubbles: true }));
+                  el.dispatchEvent(new Event('change', { bubbles: true }));
+                } else {
+                  el.value = valToSet;
+                  el.dispatchEvent(new Event('input', { bubbles: true }));
+                  el.dispatchEvent(new Event('change', { bubbles: true }));
+                }
               }
               filled++;
               break;

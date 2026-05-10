@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       natureOfBusiness:  profile.natureOfBusiness,
       gstNumber:         profile.gstNumber,
       panNumber:         profile.panNumber,
+      aadhaarNumber:     profile.aadhaarNumber,
       udyamNumber:       profile.udyamNumber,
       cinNumber:         profile.cinNumber,
       state:             profile.state,

@@ -131,6 +131,14 @@ export const analyzeCompliance = (profile: BusinessProfile): ComplianceItem[] =>
     items.push({ id: 'pan', name: 'PAN Registration', category: 'Registration', status: 'missing', description: 'PAN is mandatory for all businesses', priority: 'high' });
   }
 
+  // Aadhaar Check
+  if (profile.aadhaarNumber) {
+    items.push({ id: 'aadhaar', name: 'Aadhaar Linking', category: 'Registration', status: 'completed', description: 'Aadhaar linked to profile', priority: 'high' });
+  } else {
+    items.push({ id: 'aadhaar', name: 'Aadhaar Linking', category: 'Registration', status: 'missing', description: 'Aadhaar is required for identity verification and subsidies', priority: 'high' });
+  }
+
+
   // Udyam / MSME Registration
   if (profile.udyamNumber) {
     items.push({ id: 'udyam', name: 'Udyam/MSME Registration', category: 'Registration', status: 'completed', description: 'MSME registered — eligible for benefits', priority: 'high' });
